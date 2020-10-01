@@ -1,7 +1,7 @@
-#include "rttnw.h"
+#include "AudioReactive.h"
 // This contains the lower level code
 
-void rttnw::create_window()
+void AudioReactive::create_window()
 {
 	if(SDL_Init( SDL_INIT_EVERYTHING ) != 0)
 	{
@@ -146,7 +146,7 @@ void rttnw::create_window()
 	colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 }
 
-void rttnw::gl_setup()
+void AudioReactive::gl_setup()
 {
 	// some info on your current platform
 	const GLubyte *renderer = glGetString( GL_RENDERER ); // get renderer string
@@ -230,7 +230,7 @@ static void HelpMarker(const char* desc)
 	}
 }
 
-void rttnw::draw_everything()
+void AudioReactive::draw_everything()
 {
 	ImGuiIO& io = ImGui::GetIO(); (void)io; // void cast prevents unused variable warning
     //get the screen dimensions and pass in as uniforms
@@ -298,7 +298,7 @@ void rttnw::draw_everything()
 }
 
 
-void rttnw::quit()
+void AudioReactive::quit()
 {
   //shutdown everything
   ImGui_ImplOpenGL3_Shutdown();

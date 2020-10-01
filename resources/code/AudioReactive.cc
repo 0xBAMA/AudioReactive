@@ -1,8 +1,8 @@
-#include "rttnw.h"
+#include "AudioReactive.h"
 #include "debug.h"
 // This contains the very high level expression of what's going on
 
-rttnw::rttnw()
+AudioReactive::AudioReactive()
 {
     pquit = false;
 
@@ -16,7 +16,7 @@ rttnw::rttnw()
     }
 }
 
-rttnw::~rttnw()
+AudioReactive::~AudioReactive()
 {
     quit();
 }

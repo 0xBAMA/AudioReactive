@@ -3,12 +3,12 @@
 
 #include "includes.h"
 
-class rttnw
+class AudioReactive
 {
 public:
 
-	rttnw();
-	~rttnw();
+	AudioReactive();
+	~AudioReactive();
 
 private:
 

@@ -9,16 +9,16 @@
  *        Created:  07/12/2020 11:04:36 AM
  *       Compiler:  gcc
  *
- *         Author:  Jon Baker 
+ *         Author:  Jon Baker
  *
  * =====================================================================================
  */
 
 
-#include "rttnw.h"
+#include "AudioReactive.h"
 
 int main(int argc, char *argv[])
 {
-    rttnw r;
+    AudioReactive a;
     return 0;
 }
