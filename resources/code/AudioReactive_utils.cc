@@ -19,60 +19,7 @@ void AudioCallback(void*  userdata, Uint8* stream, int len)
         cout << "Audio callback passing " << len << " bytes" << endl;
 
 
-        // int16_t * data = (int16_t *)a->wav_buffer;
-        // // for(unsigned int i = 0+a->wav_offset, j=0; i < (a->wav_length/4); ++i, ++j)
-        // // {
-        // //     // cout << data[2*i] << " " << data[2*i+1] << endl;
-        // // } 
 
-        // for(unsigned int i = 0; i < 4096; ++i)
-        // {
-        //     //these are both purely real signals, so we put it in index 0
-        //     a->Lsignal[i][0] = 0.001*data[(a->wav_offset/4) + 2*i];
-        //     a->Rsignal[i][0] = 0.001*data[(a->wav_offset/4) + 2*i + 1];
-        // }
-
-        // fftw_execute(a->Lplan);
-        // fftw_execute(a->Rplan);
-
-
-        // for(int i = 0; i < 2048/16; ++i)
-        // {
-        //     fftw_complex Lsum; Lsum[0] = 0; Lsum[1] = 0;
-        //     fftw_complex Rsum; Rsum[0] = 0; Rsum[1] = 0;
-
-        //     for(int j = 0; j < 16; ++j)
-        //     {
-        //         Lsum[0] += (a->Lresult)[i+j][0];
-        //         Lsum[1] += (a->Lresult)[i+j][1];
-                
-        //         Rsum[0] += (a->Rresult)[i+j][0];
-        //         Rsum[1] += (a->Rresult)[i+j][1];
-        //     }
-            
-        //     double Lmag = sqrt(Lsum[0] * Lsum[0] +
-        //                        Lsum[1] * Lsum[1]) / (0.3*4096);
-        //     double Rmag = sqrt(Rsum[0] * Rsum[0] +
-        //                        Rsum[1] * Rsum[1]) / (0.3*4096);
-
-        //     cout << "\e[34m";
-
-        //     while(Lmag > 0)
-        //     {
-        //         printf("|");
-        //         Lmag -= 0.05;
-        //     }
-
-        //     cout << "\e[0m" << endl;
-        //     cout << "\e[31m"; 
-        //     while(Rmag > 0)
-        //     {
-        //         printf("|");
-        //         Rmag -= 0.05;
-        //     }
-
-        //     cout << "\e[0m" << endl;
-        // }
 }
 
 void AudioReactive::create_window()
@@ -219,73 +166,122 @@ void AudioReactive::create_window()
 	colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 
 
-    // /* Load the WAV */
-    if (SDL_LoadWAV("test.wav", &wav_spec, &wav_buffer, &wav_length) == NULL)
+    // // /* Load the WAV */
+    // if (SDL_LoadWAV("test.wav", &wav_spec, &wav_buffer, &wav_length) == NULL)
+    // {
+    //     fprintf(stderr, "Could not open test.wav: %s\n", SDL_GetError());
+    // }
+    // else
+    // {
+    //     cout << "Audio file info (test.wav):" << endl;
+    //     cout << "  freq:" << wav_spec.freq << endl;
+    //     cout << "  format:" << wav_spec.format << endl;
+    //     cout << "  channels:" << (int)wav_spec.channels << endl;
+    //     cout << "  samples:" << wav_spec.samples << endl;
+    //     cout << "  size:" << wav_spec.size << endl << endl; 
+
+    // }
+
+    // // set up the audio
+    // SDL_AudioSpec want, have;
+    // SDL_memset(&want, 0, sizeof(want)); /* or SDL_zero(want) */
+    // want.freq = wav_spec.freq;
+    // // want.format = AUDIO_F32;
+    // want.format = AUDIO_S16LSB;
+    // // want.format = wav_spec.format;
+    // want.channels = wav_spec.channels;
+    // want.samples = wav_spec.samples;
+    // want.callback = AudioCallback;  // this is what gives the audio device more samples
+    // want.userdata = (void*)this;
+    // dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+    
+
+    // // querying the situation
+    // cout << "Audio Device list:" << endl;
+    // int i, count = SDL_GetNumAudioDevices(0);
+
+    // for (i = 0; i < count; ++i)
+    // {
+    //     SDL_Log("Audio device %d: %s", i, SDL_GetAudioDeviceName(i, 0));
+    // }
+    
+    // cout << endl << endl;
+    // cout << "Audio device info:" << endl;
+    // cout << "  freq:" << have.freq << endl;
+    // cout << "  format:" << have.format << endl;
+    // cout << "  channels:" << (int)have.channels << endl;
+    // cout << "  samples:" << have.samples << endl;
+    // cout << "  size:" << have.size << endl << endl;
+    
+    // // unpause the device
+    // SDL_PauseAudioDevice(dev, 0); 
+
+
+    // std::string filename("test.wav");
+    // std::string filename("groupB.wav");
+    std::string filename("dennisMorrow.wav");
+
+
+    cout << "opening file: " << filename << endl;
+
+    SDL_LoadWAV(filename.c_str(), &wav_spec, &wav_buffer, &wav_length);
+    SDL_LoadWAV(filename.c_str(), &wav_spec, &wav_buffer_display, &wav_length);
+    dev = SDL_OpenAudioDevice(NULL, 0, &wav_spec, NULL, 0); 
+
+    SDL_QueueAudio(dev, wav_buffer, wav_length);
+    SDL_PauseAudioDevice(dev, 0);
+
+
+
+    SDL_AudioFormat fmt = wav_spec.format;
+
+    cout << endl << endl;
+
+    if (SDL_AUDIO_ISBIGENDIAN(fmt))
     {
-        fprintf(stderr, "Could not open test.wav: %s\n", SDL_GetError());
+        printf("big endian ");
     }
     else
     {
-        cout << "Audio file info (test.wav):" << endl;
-        cout << "  freq:" << wav_spec.freq << endl;
-        cout << "  format:" << wav_spec.format << endl;
-        cout << "  channels:" << (int)wav_spec.channels << endl;
-        cout << "  samples:" << wav_spec.samples << endl;
-        cout << "  size:" << wav_spec.size << endl << endl; 
-
+        printf("little endian ");
     }
 
-    // set up the audio
-    SDL_AudioSpec want, have;
-    SDL_memset(&want, 0, sizeof(want)); /* or SDL_zero(want) */
-    want.freq = wav_spec.freq;
-    // want.format = AUDIO_F32;
-    want.format = AUDIO_S16LSB;
-    // want.format = wav_spec.format;
-    want.channels = wav_spec.channels;
-    want.samples = wav_spec.samples;
-    want.callback = AudioCallback;  // this is what gives the audio device more samples
-    want.userdata = (void*)this;
-    dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
-    
 
-    // querying the situation
-    cout << "Audio Device list:" << endl;
-    int i, count = SDL_GetNumAudioDevices(0);
-
-    for (i = 0; i < count; ++i)
+    if (SDL_AUDIO_ISSIGNED(fmt))
     {
-        SDL_Log("Audio device %d: %s", i, SDL_GetAudioDeviceName(i, 0));
+        printf("signed ");
     }
+    else
+    {
+        printf("unsigned ");
+    }
+
+
+    if (SDL_AUDIO_ISFLOAT(fmt))
+    {
+        printf("floating point data ");
+    }
+    else
+    {
+        printf("integer data ");
+    }
+
+
+
+
+    printf("at %d bits per sample\n", (int) SDL_AUDIO_BITSIZE(fmt));
+
+
     
-    cout << endl << endl;
-    cout << "Audio device info:" << endl;
-    cout << "  freq:" << have.freq << endl;
-    cout << "  format:" << have.format << endl;
-    cout << "  channels:" << (int)have.channels << endl;
-    cout << "  samples:" << have.samples << endl;
-    cout << "  size:" << have.size << endl << endl;
+    wav_start_time = SDL_GetTicks();
     
-    // unpause the device
-    SDL_PauseAudioDevice(dev, 0); 
-
-
-
-    
-
-    // SDL_LoadWAV("test.wav", &wav_spec, &wav_buffer, &wav_length);
-    // dev = SDL_OpenAudioDevice(NULL, 0, &wav_spec, NULL, 0); 
-
-    // SDL_QueueAudio(dev, wav_buffer, wav_length);
-    // SDL_PauseAudioDevice(dev, 0);
-    
-    // // read out the data to the command line
-    // int16_t * data = (int16_t *)wav_buffer;
+    // read out the data to the command line
+    data = (int16_t *)wav_buffer_display;
     // for(unsigned int i = 0; i < (wav_length/4); ++i)
     // {
-    //     // cout << data[2*i] << " " << data[2*i+1] << endl;
+        // cout << data[2*i] << " " << data[2*i+1] << endl;
     // }
-
+    
 }
 
 
@@ -415,17 +411,81 @@ void AudioReactive::draw_everything()
 
 
    // //TEMPORARILY REPORTING AUDIO STATUS IN THE MAIN LOOP
-   // switch (SDL_GetAudioStatus())
-   //  {
-   //      case SDL_AUDIO_STOPPED: printf("stopped\n"); break;
-   //      case SDL_AUDIO_PLAYING: printf("playing\n"); break;
-   //      case SDL_AUDIO_PAUSED: printf("paused\n"); break;
-   //      default: printf("???"); break;
-   //  }
+   switch (SDL_GetAudioDeviceStatus(dev))
+    {
+        case SDL_AUDIO_STOPPED: printf("stopped\n"); break;
+        case SDL_AUDIO_PLAYING: printf("playing\n"); break;
+        case SDL_AUDIO_PAUSED: printf("paused\n"); break;
+        default: printf("???"); break;
+    }
 
 
 
+   // first step is to get the wav_offset value
+        wav_offset = 2*wav_spec.freq*(SDL_GetTicks()-wav_start_time)/1000;
 
+        cout << SDL_GetTicks() << " " << wav_offset << endl;
+        for(unsigned int i = 0; i < FFT_SIZE; ++i)
+        {
+            //these are both purely real signals, so we put it in index 0
+            if(wav_offset + 2*i + 1 < wav_length)
+            {
+                Lsignal[i][0] = 0.001*data[wav_offset + 2*i];
+                Rsignal[i][0] = 0.001*data[wav_offset + 2*i + 1];
+            }
+            else
+            {
+                Lsignal[i][0] = 0;
+                Rsignal[i][0] = 0;
+            }
+        }
+
+        usleep(32000);
+        fftw_execute(Lplan);
+        fftw_execute(Rplan);
+
+        int samples_per_band = 128;
+        
+
+        for(int i = 0; i < FFT_SIZE/(2*samples_per_band); ++i)
+        {
+            fftw_complex Lsum; Lsum[0] = 0; Lsum[1] = 0;
+            fftw_complex Rsum; Rsum[0] = 0; Rsum[1] = 0;
+
+            for(int j = 0; j < samples_per_band; ++j)
+            {
+                Lsum[0] += (Lresult)[samples_per_band*i+j][0];
+                Lsum[1] += (Lresult)[samples_per_band*i+j][1];
+                
+                Rsum[0] += (Rresult)[samples_per_band*i+j][0];
+                Rsum[1] += (Rresult)[samples_per_band*i+j][1];
+            }
+            
+            double Lmag = sqrt(Lsum[0] * Lsum[0] +
+                               Lsum[1] * Lsum[1]) / FFT_SIZE;
+            double Rmag = sqrt(Rsum[0] * Rsum[0] +
+                               Rsum[1] * Rsum[1]) / FFT_SIZE;
+
+            cout << "\e[34m";
+
+            while(Lmag > 0)
+            {
+                printf("|");
+                Lmag -= 0.05;
+            }
+
+            cout << "\e[0m" << endl;
+            cout << "\e[31m"; 
+            while(Rmag > 0)
+            {
+                printf("|");
+                Rmag -= 0.05;
+            }
+
+            cout << "\e[0m" << endl;
+        }
+
+        cout << endl;
 
 	ImGui::End();
 	ImGui::Render();

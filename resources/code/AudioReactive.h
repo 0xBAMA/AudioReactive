@@ -25,6 +25,11 @@
 	
 // };
 
+
+// #define FFT_SIZE 8192
+#define FFT_SIZE 16384
+
+
 class AudioReactive
 {
 public:
@@ -36,26 +41,30 @@ public:
 
 	// audio specifics
 	SDL_AudioSpec wav_spec;
-    SDL_AudioDeviceID dev;
+	SDL_AudioDeviceID dev;
 	Uint32 wav_length;
 	Uint8 *wav_buffer;
+	Uint8 *wav_buffer_display;
+
+	int16_t * data; 
 
 	Uint32 wav_offset; // where we are in the current buffer
+	Uint32 wav_start_time; // acquired w/ SDL_GetTicks()
 
 	// fftw output
-		fftw_complex Lsignal[4096];
-		fftw_complex Lresult[4096];
+		fftw_complex Lsignal[FFT_SIZE];
+		fftw_complex Lresult[FFT_SIZE];
 		
-		fftw_complex Rsignal[4096];
-		fftw_complex Rresult[4096];
+		fftw_complex Rsignal[FFT_SIZE];
+		fftw_complex Rresult[FFT_SIZE];
 
-		fftw_plan Lplan = fftw_plan_dft_1d(4096,
+		fftw_plan Lplan = fftw_plan_dft_1d(FFT_SIZE,
 										  Lsignal,
 										  Lresult,
 										  FFTW_FORWARD,
 										  FFTW_ESTIMATE);
 		
-		fftw_plan Rplan = fftw_plan_dft_1d(4096,
+		fftw_plan Rplan = fftw_plan_dft_1d(FFT_SIZE,
 										  Rsignal,
 										  Rresult,
 										  FFTW_FORWARD,
