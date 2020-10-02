@@ -11,11 +11,68 @@ void AudioCallback(void*  userdata, Uint8* stream, int len)
 
         /* Mix as much data as possible */
         len = ( len > (int)a->wav_length ? (int)a->wav_length : len );
-        SDL_MixAudio(stream, a->wav_buffer, len, SDL_MIX_MAXVOLUME);
-        a->wav_buffer += len;
+        SDL_MixAudio(stream, a->wav_buffer+a->wav_offset, len, SDL_MIX_MAXVOLUME);
+        // a->wav_buffer += len;
         a->wav_length -= len;
-
+        a->wav_offset += len;
+        
         cout << "Audio callback passing " << len << " bytes" << endl;
+
+
+        // int16_t * data = (int16_t *)a->wav_buffer;
+        // // for(unsigned int i = 0+a->wav_offset, j=0; i < (a->wav_length/4); ++i, ++j)
+        // // {
+        // //     // cout << data[2*i] << " " << data[2*i+1] << endl;
+        // // } 
+
+        // for(unsigned int i = 0; i < 4096; ++i)
+        // {
+        //     //these are both purely real signals, so we put it in index 0
+        //     a->Lsignal[i][0] = 0.001*data[(a->wav_offset/4) + 2*i];
+        //     a->Rsignal[i][0] = 0.001*data[(a->wav_offset/4) + 2*i + 1];
+        // }
+
+        // fftw_execute(a->Lplan);
+        // fftw_execute(a->Rplan);
+
+
+        // for(int i = 0; i < 2048/16; ++i)
+        // {
+        //     fftw_complex Lsum; Lsum[0] = 0; Lsum[1] = 0;
+        //     fftw_complex Rsum; Rsum[0] = 0; Rsum[1] = 0;
+
+        //     for(int j = 0; j < 16; ++j)
+        //     {
+        //         Lsum[0] += (a->Lresult)[i+j][0];
+        //         Lsum[1] += (a->Lresult)[i+j][1];
+                
+        //         Rsum[0] += (a->Rresult)[i+j][0];
+        //         Rsum[1] += (a->Rresult)[i+j][1];
+        //     }
+            
+        //     double Lmag = sqrt(Lsum[0] * Lsum[0] +
+        //                        Lsum[1] * Lsum[1]) / (0.3*4096);
+        //     double Rmag = sqrt(Rsum[0] * Rsum[0] +
+        //                        Rsum[1] * Rsum[1]) / (0.3*4096);
+
+        //     cout << "\e[34m";
+
+        //     while(Lmag > 0)
+        //     {
+        //         printf("|");
+        //         Lmag -= 0.05;
+        //     }
+
+        //     cout << "\e[0m" << endl;
+        //     cout << "\e[31m"; 
+        //     while(Rmag > 0)
+        //     {
+        //         printf("|");
+        //         Rmag -= 0.05;
+        //     }
+
+        //     cout << "\e[0m" << endl;
+        // }
 }
 
 void AudioReactive::create_window()
@@ -163,122 +220,72 @@ void AudioReactive::create_window()
 
 
     // /* Load the WAV */
-    // if (SDL_LoadWAV("test.wav", &wav_spec, &wav_buffer, &wav_length) == NULL)
-    // {
-    //     fprintf(stderr, "Could not open test.wav: %s\n", SDL_GetError());
-    // }
-    // else
-    // {
-    //     cout << "Audio file info (test.wav):" << endl;
-    //     cout << "  freq:" << wav_spec.freq << endl;
-    //     cout << "  format:" << wav_spec.format << endl;
-    //     cout << "  channels:" << (int)wav_spec.channels << endl;
-    //     cout << "  samples:" << wav_spec.samples << endl;
-    //     cout << "  size:" << wav_spec.size << endl << endl; 
+    if (SDL_LoadWAV("test.wav", &wav_spec, &wav_buffer, &wav_length) == NULL)
+    {
+        fprintf(stderr, "Could not open test.wav: %s\n", SDL_GetError());
+    }
+    else
+    {
+        cout << "Audio file info (test.wav):" << endl;
+        cout << "  freq:" << wav_spec.freq << endl;
+        cout << "  format:" << wav_spec.format << endl;
+        cout << "  channels:" << (int)wav_spec.channels << endl;
+        cout << "  samples:" << wav_spec.samples << endl;
+        cout << "  size:" << wav_spec.size << endl << endl; 
 
-    // }
+    }
 
-    // // set up the audio
-    // SDL_AudioSpec want, have;
-    // SDL_memset(&want, 0, sizeof(want)); /* or SDL_zero(want) */
-    // want.freq = wav_spec.freq;
-    // // want.format = AUDIO_F32;
+    // set up the audio
+    SDL_AudioSpec want, have;
+    SDL_memset(&want, 0, sizeof(want)); /* or SDL_zero(want) */
+    want.freq = wav_spec.freq;
+    // want.format = AUDIO_F32;
+    want.format = AUDIO_S16LSB;
     // want.format = wav_spec.format;
-    // want.channels = wav_spec.channels;
-    // want.samples = wav_spec.samples;
-    // want.callback = AudioCallback;  // this is what gives the audio device more samples
-    // want.userdata = (void*)this;
-    // dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+    want.channels = wav_spec.channels;
+    want.samples = wav_spec.samples;
+    want.callback = AudioCallback;  // this is what gives the audio device more samples
+    want.userdata = (void*)this;
+    dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
     
 
-    // // querying the situation
-    // cout << "Audio Device list:" << endl;
-    // int i, count = SDL_GetNumAudioDevices(0);
+    // querying the situation
+    cout << "Audio Device list:" << endl;
+    int i, count = SDL_GetNumAudioDevices(0);
 
-    // for (i = 0; i < count; ++i)
-    // {
-    //     SDL_Log("Audio device %d: %s", i, SDL_GetAudioDeviceName(i, 0));
-    // }
-    // 
-    // cout << endl << endl;
-    // cout << "Audio device info:" << endl;
-    // cout << "  freq:" << have.freq << endl;
-    // cout << "  format:" << have.format << endl;
-    // cout << "  channels:" << (int)have.channels << endl;
-    // cout << "  samples:" << have.samples << endl;
-    // cout << "  size:" << have.size << endl << endl;
+    for (i = 0; i < count; ++i)
+    {
+        SDL_Log("Audio device %d: %s", i, SDL_GetAudioDeviceName(i, 0));
+    }
+    
+    cout << endl << endl;
+    cout << "Audio device info:" << endl;
+    cout << "  freq:" << have.freq << endl;
+    cout << "  format:" << have.format << endl;
+    cout << "  channels:" << (int)have.channels << endl;
+    cout << "  samples:" << have.samples << endl;
+    cout << "  size:" << have.size << endl << endl;
     
     // unpause the device
-    // SDL_PauseAudioDevice(dev, 0); 
+    SDL_PauseAudioDevice(dev, 0); 
 
 
 
     
 
-    // that wasn't working - there's something I'm missing - turns out that I can still get the
-    //   data using SDL_QueueAudio so it probably makes more sense to do it that way
-    SDL_LoadWAV("test.wav", &wav_spec, &wav_buffer, &wav_length);
-    dev = SDL_OpenAudioDevice(NULL, 0, &wav_spec, NULL, 0); 
+    // SDL_LoadWAV("test.wav", &wav_spec, &wav_buffer, &wav_length);
+    // dev = SDL_OpenAudioDevice(NULL, 0, &wav_spec, NULL, 0); 
 
-    SDL_QueueAudio(dev, wav_buffer, wav_length);
-    SDL_PauseAudioDevice(dev, 0);
-
+    // SDL_QueueAudio(dev, wav_buffer, wav_length);
+    // SDL_PauseAudioDevice(dev, 0);
+    
+    // // read out the data to the command line
+    // int16_t * data = (int16_t *)wav_buffer;
     // for(unsigned int i = 0; i < (wav_length/4); ++i)
     // {
-    //     cout << (Uint16)(wav_buffer[4*i+0] << 8 + wav_buffer[4*i+1]) << ", "
-    //          << (Uint16)(wav_buffer[4*i+2] << 8 + wav_buffer[4*i+3]) << endl;
-    //          // << " " << i << endl;
+    //     // cout << data[2*i] << " " << data[2*i+1] << endl;
     // }
 
-
-    int16_t * data = (int16_t *)wav_buffer;
-    for(unsigned int i = 0; i < (wav_length/4); ++i)
-    {
-        cout << data[2*i] << " " << data[2*i+1] << endl;
-    }
-
-    
-    
-    SDL_AudioFormat fmt = wav_spec.format;
-
-    cout << endl << endl;
-
-    if (SDL_AUDIO_ISBIGENDIAN(fmt))
-    {
-        printf("big endian ");
-    }
-    else
-    {
-        printf("little endian ");
-    }
-
-
-    if (SDL_AUDIO_ISSIGNED(fmt))
-    {
-        printf("signed ");
-    }
-    else
-    {
-        printf("unsigned ");
-    }
-
-
-    if (SDL_AUDIO_ISFLOAT(fmt))
-    {
-        printf("floating point data\n");
-    }
-    else
-    {
-        printf("integer data\n");
-    }
-
-
-    
-    printf("%d bits per sample\n", (int) SDL_AUDIO_BITSIZE(fmt));
-
-
-
- 
 }
 
 
@@ -405,6 +412,16 @@ void AudioReactive::draw_everything()
 
     //do the other widgets
    HelpMarker("shut up, compiler");
+
+
+   // //TEMPORARILY REPORTING AUDIO STATUS IN THE MAIN LOOP
+   // switch (SDL_GetAudioStatus())
+   //  {
+   //      case SDL_AUDIO_STOPPED: printf("stopped\n"); break;
+   //      case SDL_AUDIO_PLAYING: printf("playing\n"); break;
+   //      case SDL_AUDIO_PAUSED: printf("paused\n"); break;
+   //      default: printf("???"); break;
+   //  }
 
 
 

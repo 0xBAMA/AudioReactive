@@ -1,6 +1,7 @@
 #ifndef INCLUDES
 #define INCLUDES
 
+#include <unistd.h>
 #include <stdio.h>
 
 //stl includes
@@ -44,6 +45,11 @@ using std::endl;
 #include "../imgui/imgui.h"
 #include "../imgui/imgui_impl_sdl.h"
 #include "../imgui/imgui_impl_opengl3.h"
+
+
+//FFTW3 - fastest fft in the west
+#include <fftw3.h>
+
 
 
 // Initialize glew loader with glewInit()

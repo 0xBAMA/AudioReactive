@@ -42,6 +42,24 @@ public:
 
 	Uint32 wav_offset; // where we are in the current buffer
 
+	// fftw output
+		fftw_complex Lsignal[4096];
+		fftw_complex Lresult[4096];
+		
+		fftw_complex Rsignal[4096];
+		fftw_complex Rresult[4096];
+
+		fftw_plan Lplan = fftw_plan_dft_1d(4096,
+										  Lsignal,
+										  Lresult,
+										  FFTW_FORWARD,
+										  FFTW_ESTIMATE);
+		
+		fftw_plan Rplan = fftw_plan_dft_1d(4096,
+										  Rsignal,
+										  Rresult,
+										  FFTW_FORWARD,
+										  FFTW_ESTIMATE);	
 private:
 
 	SDL_Window * window;
