@@ -1,6 +1,23 @@
 #include "AudioReactive.h"
 // This contains the lower level code
 
+void AudioCallback(void*  userdata, Uint8* stream, int len)
+{
+    AudioReactive * a = (AudioReactive *) userdata;
+
+        /* Only play if we have data left */
+        if ( a->wav_length == 0 )
+            return;
+
+        /* Mix as much data as possible */
+        len = ( len > (int)a->wav_length ? (int)a->wav_length : len );
+        SDL_MixAudio(stream, a->wav_buffer, len, SDL_MIX_MAXVOLUME);
+        a->wav_buffer += len;
+        a->wav_length -= len;
+
+        cout << "Audio callback passing " << len << " bytes" << endl;
+}
+
 void AudioReactive::create_window()
 {
 	if(SDL_Init( SDL_INIT_EVERYTHING ) != 0)
@@ -52,7 +69,6 @@ void AudioReactive::create_window()
 	SDL_GL_SetSwapInterval(1); // Enable vsync
 	// SDL_GL_SetSwapInterval(0); // explicitly disable vsync
 
-    // CONTINUUM REPRESENTATION POINTS
 
 
 
@@ -144,7 +160,85 @@ void AudioReactive::create_window()
 	colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
 	colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
 	colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+
+
+    // /* Load the WAV */
+    // if (SDL_LoadWAV("test.wav", &wav_spec, &wav_buffer, &wav_length) == NULL)
+    // {
+    //     fprintf(stderr, "Could not open test.wav: %s\n", SDL_GetError());
+    // }
+    // else
+    // {
+    //     cout << "Audio file info (test.wav):" << endl;
+    //     cout << "  freq:" << wav_spec.freq << endl;
+    //     cout << "  format:" << wav_spec.format << endl;
+    //     cout << "  channels:" << (int)wav_spec.channels << endl;
+    //     cout << "  samples:" << wav_spec.samples << endl;
+    //     cout << "  size:" << wav_spec.size << endl << endl; 
+
+    // }
+
+    // // set up the audio
+    // SDL_AudioSpec want, have;
+    // SDL_memset(&want, 0, sizeof(want)); /* or SDL_zero(want) */
+    // want.freq = wav_spec.freq;
+    // // want.format = AUDIO_F32;
+    // want.format = wav_spec.format;
+    // want.channels = wav_spec.channels;
+    // want.samples = wav_spec.samples;
+    // want.callback = AudioCallback;  // this is what gives the audio device more samples
+    // want.userdata = (void*)this;
+    // dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+    
+
+    // // querying the situation
+    // cout << "Audio Device list:" << endl;
+    // int i, count = SDL_GetNumAudioDevices(0);
+
+    // for (i = 0; i < count; ++i)
+    // {
+    //     SDL_Log("Audio device %d: %s", i, SDL_GetAudioDeviceName(i, 0));
+    // }
+    // 
+    // cout << endl << endl;
+    // cout << "Audio device info:" << endl;
+    // cout << "  freq:" << have.freq << endl;
+    // cout << "  format:" << have.format << endl;
+    // cout << "  channels:" << (int)have.channels << endl;
+    // cout << "  samples:" << have.samples << endl;
+    // cout << "  size:" << have.size << endl << endl;
+    
+    // unpause the device
+    // SDL_PauseAudioDevice(dev, 0); 
+
+
+
+    
+
+    // that wasn't working - there's something I'm missing - turns out that I can still get the
+    //   data using SDL_QueueAudio so it probably makes more sense to do it that way
+    SDL_LoadWAV("test.wav", &wav_spec, &wav_buffer, &wav_length);
+    dev = SDL_OpenAudioDevice(NULL, 0, &wav_spec, NULL, 0); 
+
+    SDL_QueueAudio(dev, wav_buffer, wav_length);
+    SDL_PauseAudioDevice(dev, 0);
+
+    for(int i = 0; i < (wav_length/4); ++i)
+    {
+        cout << (int)(wav_buffer[4*i+0] << 8 + wav_buffer[4*i+1]) << " "
+             << (int)(wav_buffer[4*i+2] << 8 + wav_buffer[4*i+3])
+             << " " << i << endl;
+    }
+
+    
+
+
+
+ 
 }
+
+
+
 
 void AudioReactive::gl_setup()
 {
@@ -206,12 +300,12 @@ void AudioReactive::gl_setup()
     cout << "done." << endl;
 
 
-    // create the image textures
 
-    // compile the compute shader to do the raycasting
+    // this is where I'll be setting up the shaders for the waveforms, as well as the geometry to represent them
+    
 
-    // ...
 
+    
 
 
 }
