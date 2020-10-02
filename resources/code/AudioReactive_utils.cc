@@ -223,14 +223,58 @@ void AudioReactive::create_window()
     SDL_QueueAudio(dev, wav_buffer, wav_length);
     SDL_PauseAudioDevice(dev, 0);
 
-    for(int i = 0; i < (wav_length/4); ++i)
+    // for(unsigned int i = 0; i < (wav_length/4); ++i)
+    // {
+    //     cout << (Uint16)(wav_buffer[4*i+0] << 8 + wav_buffer[4*i+1]) << ", "
+    //          << (Uint16)(wav_buffer[4*i+2] << 8 + wav_buffer[4*i+3]) << endl;
+    //          // << " " << i << endl;
+    // }
+
+
+    int16_t * data = (int16_t *)wav_buffer;
+    for(unsigned int i = 0; i < (wav_length/4); ++i)
     {
-        cout << (int)(wav_buffer[4*i+0] << 8 + wav_buffer[4*i+1]) << " "
-             << (int)(wav_buffer[4*i+2] << 8 + wav_buffer[4*i+3])
-             << " " << i << endl;
+        cout << data[2*i] << " " << data[2*i+1] << endl;
     }
 
     
+    
+    SDL_AudioFormat fmt = wav_spec.format;
+
+    cout << endl << endl;
+
+    if (SDL_AUDIO_ISBIGENDIAN(fmt))
+    {
+        printf("big endian ");
+    }
+    else
+    {
+        printf("little endian ");
+    }
+
+
+    if (SDL_AUDIO_ISSIGNED(fmt))
+    {
+        printf("signed ");
+    }
+    else
+    {
+        printf("unsigned ");
+    }
+
+
+    if (SDL_AUDIO_ISFLOAT(fmt))
+    {
+        printf("floating point data\n");
+    }
+    else
+    {
+        printf("integer data\n");
+    }
+
+
+    
+    printf("%d bits per sample\n", (int) SDL_AUDIO_BITSIZE(fmt));
 
 
 
