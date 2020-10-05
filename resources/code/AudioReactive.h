@@ -4,26 +4,36 @@
 #include "includes.h"
 
 
-// class Waveform
-// {
-// public:
-// 	Waveform();
-// 	~Waveform();
+class Waveform
+{
+public:
+	Waveform();
+	~Waveform();
 
-// 	void display();
+	void display();
 		
-// 	// parameters for position, accessible from above
-// 	// parameters for color, establishing the gradient
+	// parameters for position, accessible from above
+	// parameters for color, establishing the gradient
 
-// 	void feed_new_data(std::vector<Uint8> data);
+	void feed_new_data(std::vector<Uint8> data);
 		
-// private:
-// 	// OpenGL specific data
-// 	GLuint shader;
-// 	GLuint vao;
-// 	GLuint vbo;
-	
-// };
+private:
+
+	void generate_points();
+	void subd_square(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d, int levels, int current=0);
+
+	std::vector<glm::vec3> points;
+		
+	// OpenGL specific data
+	GLuint shader_display;
+	GLuint shader_compute;
+	GLuint vao;
+	GLuint vbo;
+
+	int num_points;
+
+	// need to know the two texture units serving as front/back buffers
+};
 
 
 // #define FFT_SIZE 8192
@@ -80,7 +90,7 @@ private:
 	GLuint display_vao;
 	GLuint display_vbo;
 
-	// std::vector<Waveform> waveforms; // this holds all your waveforms, initially emtpy
+	std::vector<Waveform> waveforms; // this holds all your waveforms, initially emtpy
 
 	void create_window();
 	void gl_setup();

@@ -1,6 +1,111 @@
 #include "AudioReactive.h"
 // This contains the lower level code
 
+
+Waveform::Waveform()
+{
+    // create the vao
+
+    // create the vbo
+
+    // initalize textures
+
+    // compile shaders (display + compute)
+
+    // generate geometry
+    generate_points();
+    
+    // buffer to GPU
+
+    // vertex attributes (position only)
+}
+
+Waveform::~Waveform()
+{
+    
+}
+
+void Waveform::generate_points()
+{
+    // surface
+    glm::vec3 a, b, c, d;
+
+    float scale = 0.5f;
+
+    a = glm::vec3(-1.0f*scale, -1.0f*scale, 0.0f);
+    b = glm::vec3(-1.0f*scale, 1.0f*scale, 0.0f);
+    c = glm::vec3(1.0f*scale, -1.0f*scale, 0.0f);
+    d = glm::vec3(1.0f*scale, 1.0f*scale, 0.0f);
+
+    subd_square(a, b, c, d, 8);
+
+    num_points = points.size();
+    cout << "surface is " << num_points << " points" << endl;
+
+  // skirts
+    
+}
+
+void Waveform::subd_square(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d, int levels, int current)
+{
+    if(current == levels)
+    {//add points
+        // triangle 1 ABC
+        points.push_back(a);
+        points.push_back(b);
+        points.push_back(c);
+        //triangle 2 BCD
+        points.push_back(b);
+        points.push_back(c);
+        points.push_back(d);
+
+        //middle
+        // points.push_back((a+b+c+d)/4.0f);
+    }
+    else
+    { //recurse
+        glm::vec3 center = (a + b + c + d) / 4.0f;    //center of the square
+
+        glm::vec3 bdmidp = (b + d) / 2.0f;            //midpoint between b and d
+        glm::vec3 abmidp = (a + b) / 2.0f;            //midpoint between a and b
+        glm::vec3 cdmidp = (c + d) / 2.0f;            //midpoint between c and d
+        glm::vec3 acmidp = (a + c) / 2.0f;            //midpoint between a and c
+
+        subd_square(abmidp, b, center, bdmidp, levels, current+1);
+        subd_square(a, abmidp, acmidp, center, levels, current+1);
+        subd_square(center, bdmidp, cdmidp, d, levels, current+1);
+        subd_square(acmidp, center, c, cdmidp, levels, current+1);
+    } 
+}
+
+void Waveform::display()
+{
+    // use shader
+    // glUseProgram(whatever);
+    
+    // bind vao
+    glBindVertexArray(vao);
+
+    // need to use the handle for the front buffer, the current data
+    
+    // draw everything in one go - surface/skirts distinction made in shader
+}
+
+void Waveform::feed_new_data(std::vector<Uint8> data)
+{
+    // the data goes in as a uniform vector of floats
+
+    // the compute shader will need to know which is front/back
+
+    // linear data is stored in the texture, we will be doing the logarithmic conversion as part of our sampling 
+}
+
+
+
+
+
+
+
 void AudioCallback(void*  userdata, Uint8* stream, int len)
 {
     AudioReactive * a = (AudioReactive *) userdata;
@@ -236,7 +341,6 @@ void AudioReactive::create_window()
     SDL_AudioFormat fmt = wav_spec.format;
 
     cout << endl << endl;
-
     if (SDL_AUDIO_ISBIGENDIAN(fmt))
     {
         printf("big endian ");
@@ -245,7 +349,6 @@ void AudioReactive::create_window()
     {
         printf("little endian ");
     }
-
 
     if (SDL_AUDIO_ISSIGNED(fmt))
     {
@@ -256,7 +359,6 @@ void AudioReactive::create_window()
         printf("unsigned ");
     }
 
-
     if (SDL_AUDIO_ISFLOAT(fmt))
     {
         printf("floating point data ");
@@ -266,21 +368,15 @@ void AudioReactive::create_window()
         printf("integer data ");
     }
 
-
-
-
     printf("at %d bits per sample\n", (int) SDL_AUDIO_BITSIZE(fmt));
 
 
     
     wav_start_time = SDL_GetTicks();
     
-    // read out the data to the command line
     data = (int16_t *)wav_buffer_display;
-    // for(unsigned int i = 0; i < (wav_length/4); ++i)
-    // {
-        // cout << data[2*i] << " " << data[2*i+1] << endl;
-    // }
+
+
     
 }
 
@@ -350,7 +446,7 @@ void AudioReactive::gl_setup()
 
     // this is where I'll be setting up the shaders for the waveforms, as well as the geometry to represent them
     
-
+    waveforms.resize(2);
 
     
 
@@ -410,82 +506,84 @@ void AudioReactive::draw_everything()
    HelpMarker("shut up, compiler");
 
 
-   // //TEMPORARILY REPORTING AUDIO STATUS IN THE MAIN LOOP
-   switch (SDL_GetAudioDeviceStatus(dev))
-    {
-        case SDL_AUDIO_STOPPED: printf("stopped\n"); break;
-        case SDL_AUDIO_PLAYING: printf("playing\n"); break;
-        case SDL_AUDIO_PAUSED: printf("paused\n"); break;
-        default: printf("???"); break;
-    }
+   // // //TEMPORARILY REPORTING AUDIO STATUS IN THE MAIN LOOP - this is not going to give me enough information
+   // switch (SDL_GetAudioDeviceStatus(dev))
+   //  {
+   //      case SDL_AUDIO_STOPPED: printf("stopped\n"); break;
+   //      case SDL_AUDIO_PLAYING: printf("playing\n"); break;
+   //      case SDL_AUDIO_PAUSED: printf("paused\n"); break;
+   //      default: printf("???"); break;
+   //  }
 
 
 
    // first step is to get the wav_offset value
         wav_offset = 2*wav_spec.freq*(SDL_GetTicks()-wav_start_time)/1000;
 
-        cout << SDL_GetTicks() << " " << wav_offset << endl;
-        for(unsigned int i = 0; i < FFT_SIZE; ++i)
-        {
-            //these are both purely real signals, so we put it in index 0
-            if(wav_offset + 2*i + 1 < wav_length)
-            {
-                Lsignal[i][0] = 0.001*data[wav_offset + 2*i];
-                Rsignal[i][0] = 0.001*data[wav_offset + 2*i + 1];
-            }
-            else
-            {
-                Lsignal[i][0] = 0;
-                Rsignal[i][0] = 0;
-            }
-        }
+        // cout << SDL_GetTicks() << " " << wav_offset << endl;
+        // for(unsigned int i = 0; i < FFT_SIZE; ++i)
+        // {
+        //     //these are both purely real signals, so we put it in index 0
+        //     if(wav_offset + 2*i + 1 < wav_length)
+        //     {
+        //         Lsignal[i][0] = 0.0025*data[wav_offset + 2*i];
+        //         Rsignal[i][0] = 0.0025*data[wav_offset + 2*i + 1];
+        //     }
+        //     else
+        //     {
+        //         Lsignal[i][0] = 0;
+        //         Rsignal[i][0] = 0;
+        //     }
+        // }
 
-        usleep(32000);
-        fftw_execute(Lplan);
-        fftw_execute(Rplan);
+        // usleep(48000);
+        // fftw_execute(Lplan);
+        // fftw_execute(Rplan);
 
-        int samples_per_band = 128;
+        // int samples_per_band = 128;
         
 
-        for(int i = 0; i < FFT_SIZE/(2*samples_per_band); ++i)
-        {
-            fftw_complex Lsum; Lsum[0] = 0; Lsum[1] = 0;
-            fftw_complex Rsum; Rsum[0] = 0; Rsum[1] = 0;
+        // for(int i = 0; i < FFT_SIZE/(2*samples_per_band); ++i)
+        // {
+        //     fftw_complex Lsum; Lsum[0] = 0; Lsum[1] = 0;
+        //     fftw_complex Rsum; Rsum[0] = 0; Rsum[1] = 0;
 
-            for(int j = 0; j < samples_per_band; ++j)
-            {
-                Lsum[0] += (Lresult)[samples_per_band*i+j][0];
-                Lsum[1] += (Lresult)[samples_per_band*i+j][1];
+        //     for(int j = 0; j < FFT_SIZE/(2*samples_per_band); ++j)
+        //     {
+        //         Lsum[0] += (Lresult)[samples_per_band*i+j][0];
+        //         Lsum[1] += (Lresult)[samples_per_band*i+j][1];
                 
-                Rsum[0] += (Rresult)[samples_per_band*i+j][0];
-                Rsum[1] += (Rresult)[samples_per_band*i+j][1];
-            }
+        //         Rsum[0] += (Rresult)[samples_per_band*i+j][0];
+        //         Rsum[1] += (Rresult)[samples_per_band*i+j][1];
+        //     }
             
-            double Lmag = sqrt(Lsum[0] * Lsum[0] +
-                               Lsum[1] * Lsum[1]) / FFT_SIZE;
-            double Rmag = sqrt(Rsum[0] * Rsum[0] +
-                               Rsum[1] * Rsum[1]) / FFT_SIZE;
+        //     double Lmag = sqrt(Lsum[0] * Lsum[0] +
+        //                        Lsum[1] * Lsum[1]) / FFT_SIZE;
+        //     double Rmag = sqrt(Rsum[0] * Rsum[0] +
+        //                        Rsum[1] * Rsum[1]) / FFT_SIZE;
 
-            cout << "\e[34m";
+        //     cout << "\e[34m";
 
-            while(Lmag > 0)
-            {
-                printf("|");
-                Lmag -= 0.05;
-            }
+        //     while(Lmag > 0)
+        //     {
+        //         printf("|");
+        //         Lmag -= 0.03;
+        //         Lmag *= 0.99;
+        //     }
 
-            cout << "\e[0m" << endl;
-            cout << "\e[31m"; 
-            while(Rmag > 0)
-            {
-                printf("|");
-                Rmag -= 0.05;
-            }
+        //     cout << "\e[0m" << endl;
+        //     cout << "\e[31m"; 
+        //     while(Rmag > 0)
+        //     {
+        //         printf("|");
+        //         Rmag -= 0.03;
+        //         Rmag *= 0.99;
+        //     }
 
-            cout << "\e[0m" << endl;
-        }
+        //     cout << "\e[0m" << endl;
+        // }
 
-        cout << endl;
+        // cout << endl;
 
 	ImGui::End();
 	ImGui::Render();
