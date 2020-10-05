@@ -4,20 +4,68 @@
 
 Waveform::Waveform()
 {
+    // static variable allows multiple instantiations of this waveform display
+    static int current_texture_unit{0}; // constructing with zero will initialize the count
+    
     // create the vao
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
 
     // create the vbo
-
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  
     // initalize textures
+    my_front = current_texture_unit;
+    my_back = current_texture_unit+1;
 
+    GLuint my_front_loc, my_back_loc;
+    glGenTextures(1, &my_front_loc);
+    glGenTextures(1, &my_back_loc);
+
+
+    // going to use 16 bit values for the texture
+    glBindTexture(GL_TEXTURE_2D, my_front_loc);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glBindImageTexture(my_front, my_front_loc, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, 8196, 8196, 0, GL_RGBA, GL_FLOAT, NULL);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    
+    glBindTexture(GL_TEXTURE_2D, my_back_loc);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glBindImageTexture(my_back, my_back_loc, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, 8196, 8196, 0, GL_RGBA, GL_FLOAT, NULL);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    
+    // we used two
+    current_texture_unit += 2;
+    
     // compile shaders (display + compute)
+    shader_display = Shader("resources/code/shaders/display.vs.glsl", "resources/code/shaders/display.fs.glsl").Program;
+    // shader_compute = CShader("resources/shaders/compute.cs.glsl").Program;
 
+    // using the display shader initially
+    glUseProgram(shader_display);
+    
     // generate geometry
     generate_points();
     
     // buffer to GPU
+    int num_bytes_points = sizeof(glm::vec3) * points.size();
 
+    glBufferData(GL_ARRAY_BUFFER, num_bytes_points, NULL, GL_STATIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, num_bytes_points, &points[0]);
+    
     // vertex attributes (position only)
+    GLuint vPosition = glGetAttribLocation(shader_display, "vPosition");
+    glEnableVertexAttribArray(vPosition);
+    glVertexAttribPointer(vPosition, 3, GL_FLOAT, GL_FALSE, 0, ((GLvoid*) (0))); 
 }
 
 Waveform::~Waveform()
@@ -32,18 +80,27 @@ void Waveform::generate_points()
 
     float scale = 0.5f;
 
-    a = glm::vec3(-1.0f*scale, -1.0f*scale, 0.0f);
-    b = glm::vec3(-1.0f*scale, 1.0f*scale, 0.0f);
-    c = glm::vec3(1.0f*scale, -1.0f*scale, 0.0f);
-    d = glm::vec3(1.0f*scale, 1.0f*scale, 0.0f);
+    a = glm::vec3(-1.0f*scale, 0.0, -1.0f*scale);
+    b = glm::vec3(-1.0f*scale, 0.0, 1.0f*scale);
+    c = glm::vec3(1.0f*scale, 0.0, -1.0f*scale);
+    d = glm::vec3(1.0f*scale, 0.0, 1.0f*scale);
 
-    subd_square(a, b, c, d, 8);
+    subd_square(a, b, c, d, 9);
 
     num_points = points.size();
     cout << "surface is " << num_points << " points" << endl;
 
   // skirts
+    // generate points
+    subd_skirts(a, b, 9);
+    subd_skirts(b, d, 9);
+    subd_skirts(d, c, 9);
+    subd_skirts(c, a, 9);
     
+    cout << "plus " << points.size()-num_points << " points for the skirts" << endl;
+    cout << "for a total of " << points.size() << " points" << endl;
+
+    num_points = points.size();
 }
 
 void Waveform::subd_square(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d, int levels, int current)
@@ -78,24 +135,67 @@ void Waveform::subd_square(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d, i
     } 
 }
 
+void Waveform::subd_skirts(glm::vec3 a, glm::vec3 b, int levels, int current)
+{
+    // direction doesn't matter, we're not doing anything that depends on front/back facing
+    //  we only need slices along the horizontal axis
+    if(current == levels)
+    {
+        //triangle abc
+        points.push_back(a);
+        points.push_back(b);
+        points.push_back(glm::vec3(a.x, -0.5, a.z));
+
+        //triangle bcd
+        points.push_back(b);
+        points.push_back(glm::vec3(a.x, -0.5, a.z));
+        points.push_back(glm::vec3(b.x, -0.5, b.z));
+    }
+    else
+    {
+        glm::vec3 center = (a+b) / 2.0f;
+        subd_skirts(a, center, levels, current+1);
+        subd_skirts(center, b, levels, current+1);
+    }
+}
+
 void Waveform::display()
 {
-    // use shader
-    // glUseProgram(whatever);
     
-    // bind vao
+    // bind vao, vbo
     glBindVertexArray(vao);
+    glBindBuffer( GL_ARRAY_BUFFER, vbo );
+    
+    // use shader
+    glUseProgram(shader_display);
 
     // need to use the handle for the front buffer, the current data
-    
+    // glUniform1i(glGetUniformLocation(shader_display, "data_texture"), my_front);
+    glUniform1f(glGetUniformLocation(shader_display, "theta"), theta);
+    glUniform1f(glGetUniformLocation(shader_display, "phi"), phi);
+ 
     // draw everything in one go - surface/skirts distinction made in shader
+    glDrawArrays(GL_TRIANGLES, 0, num_points);
 }
 
 void Waveform::feed_new_data(std::vector<Uint8> data)
 {
+    // use the compute shader program
+    // glUseProgram(shader_compute);
+
     // the data goes in as a uniform vector of floats
 
     // the compute shader will need to know which is front/back
+    // glUniform1i(glGetUniformLocation(shader_compute, "front_buffer"), my_front);
+    // glUniform1i(glGetUniformLocation(shader_compute, "back_buffer"), my_back);
+
+    // dispatch the compute shader
+    
+    // wait to finish
+    glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); 
+    
+    // re generate the mipmap, after the compute has finished
+    glGenerateMipmap(GL_TEXTURE_2D);
 
     // linear data is stored in the texture, we will be doing the logarithmic conversion as part of our sampling 
 }
@@ -122,9 +222,6 @@ void AudioCallback(void*  userdata, Uint8* stream, int len)
         a->wav_offset += len;
         
         cout << "Audio callback passing " << len << " bytes" << endl;
-
-
-
 }
 
 void AudioReactive::create_window()
@@ -442,14 +539,8 @@ void AudioReactive::gl_setup()
     glVertexAttribPointer(points_attrib, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*) (static_cast<const char*>(0) + (0)));
     cout << "done." << endl;
 
-
-
     // this is where I'll be setting up the shaders for the waveforms, as well as the geometry to represent them
-    
-    waveforms.resize(2);
-
-    
-
+    waveforms.resize(2); // all the setup is done in the constructor, so this is going to be running all that twice
 
 }
 
@@ -479,12 +570,14 @@ void AudioReactive::draw_everything()
 	// draw the stuff on the GPU
 
     // texture display
-    glUseProgram(display_shader);
-    glBindVertexArray( display_vao );
-    glBindBuffer( GL_ARRAY_BUFFER, display_vbo );
+    // glUseProgram(display_shader);
+    // glBindVertexArray( display_vao );
+    // glBindBuffer( GL_ARRAY_BUFFER, display_vbo );
 
-    glDrawArrays( GL_TRIANGLES, 0, 6 );
+    // glDrawArrays( GL_TRIANGLES, 0, 6 );
 
+
+    
 
 	// Start the Dear ImGui frame
 	ImGui_ImplOpenGL3_NewFrame();
@@ -516,98 +609,110 @@ void AudioReactive::draw_everything()
    //  }
 
 
-
    // first step is to get the wav_offset value
         wav_offset = 2*wav_spec.freq*(SDL_GetTicks()-wav_start_time)/1000;
 
         // cout << SDL_GetTicks() << " " << wav_offset << endl;
-        // for(unsigned int i = 0; i < FFT_SIZE; ++i)
-        // {
-        //     //these are both purely real signals, so we put it in index 0
-        //     if(wav_offset + 2*i + 1 < wav_length)
-        //     {
-        //         Lsignal[i][0] = 0.0025*data[wav_offset + 2*i];
-        //         Rsignal[i][0] = 0.0025*data[wav_offset + 2*i + 1];
-        //     }
-        //     else
-        //     {
-        //         Lsignal[i][0] = 0;
-        //         Rsignal[i][0] = 0;
-        //     }
-        // }
+        for(unsigned int i = 0; i < FFT_SIZE; ++i)
+        {
+            //these are both purely real signals, so we put it in index 0
+            if(wav_offset + 2*i + 1 < wav_length)
+            {
+                Lsignal[i][0] = 0.0025*data[wav_offset + 2*i];
+                Rsignal[i][0] = 0.0025*data[wav_offset + 2*i + 1];
+            }
+            else
+            {
+                Lsignal[i][0] = 0;
+                Rsignal[i][0] = 0;
+            }
+        }
 
-        // usleep(48000);
-        // fftw_execute(Lplan);
-        // fftw_execute(Rplan);
+        usleep(48000);
+        fftw_execute(Lplan);
+        fftw_execute(Rplan);
 
-        // int samples_per_band = 128;
+        float lmax = 0;
+        float rmax = 0;
         
+        int samples_per_band = 128;
 
-        // for(int i = 0; i < FFT_SIZE/(2*samples_per_band); ++i)
-        // {
-        //     fftw_complex Lsum; Lsum[0] = 0; Lsum[1] = 0;
-        //     fftw_complex Rsum; Rsum[0] = 0; Rsum[1] = 0;
+        for(int i = 0; i < FFT_SIZE/(2*samples_per_band); ++i)
+        {
+            fftw_complex Lsum; Lsum[0] = 0; Lsum[1] = 0;
+            fftw_complex Rsum; Rsum[0] = 0; Rsum[1] = 0;
 
-        //     for(int j = 0; j < FFT_SIZE/(2*samples_per_band); ++j)
-        //     {
-        //         Lsum[0] += (Lresult)[samples_per_band*i+j][0];
-        //         Lsum[1] += (Lresult)[samples_per_band*i+j][1];
+            for(int j = 0; j < FFT_SIZE/(2*samples_per_band); ++j)
+            {
+                Lsum[0] += (Lresult)[samples_per_band*i+j][0];
+                Lsum[1] += (Lresult)[samples_per_band*i+j][1];
                 
-        //         Rsum[0] += (Rresult)[samples_per_band*i+j][0];
-        //         Rsum[1] += (Rresult)[samples_per_band*i+j][1];
-        //     }
+                Rsum[0] += (Rresult)[samples_per_band*i+j][0];
+                Rsum[1] += (Rresult)[samples_per_band*i+j][1];
+            }
             
-        //     double Lmag = sqrt(Lsum[0] * Lsum[0] +
-        //                        Lsum[1] * Lsum[1]) / FFT_SIZE;
-        //     double Rmag = sqrt(Rsum[0] * Rsum[0] +
-        //                        Rsum[1] * Rsum[1]) / FFT_SIZE;
+            double Lmag = sqrt(Lsum[0] * Lsum[0] +
+                               Lsum[1] * Lsum[1]) / FFT_SIZE;
+            double Rmag = sqrt(Rsum[0] * Rsum[0] +
+                               Rsum[1] * Rsum[1]) / FFT_SIZE;
 
-        //     cout << "\e[34m";
+            if(Lmag > lmax) lmax = Lmag;
+            if(Rmag > rmax) rmax = Rmag;
 
-        //     while(Lmag > 0)
-        //     {
-        //         printf("|");
-        //         Lmag -= 0.03;
-        //         Lmag *= 0.99;
-        //     }
+            // cout << "\e[34m";
 
-        //     cout << "\e[0m" << endl;
-        //     cout << "\e[31m"; 
-        //     while(Rmag > 0)
-        //     {
-        //         printf("|");
-        //         Rmag -= 0.03;
-        //         Rmag *= 0.99;
-        //     }
+            // while(Lmag > 0)
+            // {
+            //     printf("|");
+            //     Lmag -= 0.03;
+            //     Lmag *= 0.99;
+            // }
 
-        //     cout << "\e[0m" << endl;
-        // }
+            // cout << "\e[0m" << endl;
+            // cout << "\e[31m"; 
+            // while(Rmag > 0)
+            // {
+            //     printf("|");
+            //     Rmag -= 0.03;
+            //     Rmag *= 0.99;
+            // }
 
-        // cout << endl;
+            // cout << "\e[0m" << endl;
+        }
 
-	ImGui::End();
-	ImGui::Render();
+        // cout << "lmax is: " << lmax << " and rmax is: " << rmax << endl; // maximum intensity reported across all bands
 
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());   // put imgui data into the framebuffer
+        // this is where you're going to be drawing the waveform -
+        //  at a high level, there are two steps to this process -
+        //    1 - update the data on the GPU with the compute shader (takes the appropriate channel's freq data as input e.g. L takes Lresult, R takes Rresult)
+        //    2 - the rendering shader references this same data texture and uses it as a height value when processing the surface/skirt geometry
+        
+        for(auto& x : waveforms)
+            x.display();
+        
+        ImGui::End();
+        ImGui::Render();
 
-	SDL_GL_SwapWindow(window);			// swap the double buffers
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());   // put imgui data into the framebuffer
 
-	// handle events
+        SDL_GL_SwapWindow(window); // swap the double buffers
 
-	SDL_Event event;
-	while (SDL_PollEvent(&event))
-	{
-		ImGui_ImplSDL2_ProcessEvent(&event);
+        // handle events
 
-		if (event.type == SDL_QUIT)
-			pquit = true;
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
+        {
+            ImGui_ImplSDL2_ProcessEvent(&event);
 
-		if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
-			pquit = true;
+            if (event.type == SDL_QUIT)
+                pquit = true;
 
-		if ((event.type == SDL_KEYUP  && event.key.keysym.sym == SDLK_ESCAPE) || (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_X1)) //x1 is browser back on the mouse
-			pquit = true;
-	}
+            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+                pquit = true;
+
+            if ((event.type == SDL_KEYUP  && event.key.keysym.sym == SDLK_ESCAPE) || (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_X1)) //x1 is browser back on the mouse
+                pquit = true;
+        }
 }
 
 

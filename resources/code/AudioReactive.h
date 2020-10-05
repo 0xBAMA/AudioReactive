@@ -13,15 +13,20 @@ public:
 	void display();
 		
 	// parameters for position, accessible from above
+	float theta = 0.2;
+	float phi = -0.15;
+		
 	// parameters for color, establishing the gradient
 
 	void feed_new_data(std::vector<Uint8> data);
-		
+
 private:
 
 	void generate_points();
-	void subd_square(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d, int levels, int current=0);
-
+	void subd_square(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d, int levels, int current=0); // recursive
+	void subd_skirts(glm::vec3 a, glm::vec3 b, int levels, int current = 0); 
+		
+		
 	std::vector<glm::vec3> points;
 		
 	// OpenGL specific data
@@ -30,9 +35,14 @@ private:
 	GLuint vao;
 	GLuint vbo;
 
+	// texture units
+	GLuint my_front;
+	GLuint my_back;
+
+	// number of points in the surface and skirts
 	int num_points;
 
-	// need to know the two texture units serving as front/back buffers
+		
 };
 
 
@@ -55,9 +65,10 @@ public:
 	Uint32 wav_length;
 	Uint8 *wav_buffer;
 	Uint8 *wav_buffer_display;
-
+		
 	int16_t * data; 
 
+		// I need to think of a better mechanism to allow for pausing etc
 	Uint32 wav_offset; // where we are in the current buffer
 	Uint32 wav_start_time; // acquired w/ SDL_GetTicks()
 
