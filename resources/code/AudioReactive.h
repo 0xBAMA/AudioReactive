@@ -14,7 +14,7 @@ public:
 		
 	// parameters for position, accessible from above
 	float theta = 0.2;
-	float phi = -0.15;
+	float phi = -0.35;
 		
 	// parameters for color, establishing the gradient
 

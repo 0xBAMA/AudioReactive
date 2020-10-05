@@ -80,10 +80,10 @@ void Waveform::generate_points()
 
     float scale = 0.5f;
 
-    a = glm::vec3(-1.0f*scale, 0.0, -1.0f*scale);
-    b = glm::vec3(-1.0f*scale, 0.0, 1.0f*scale);
-    c = glm::vec3(1.0f*scale, 0.0, -1.0f*scale);
-    d = glm::vec3(1.0f*scale, 0.0, 1.0f*scale);
+    a = glm::vec3(-1.0f*scale, 0.1, -1.0f*scale);
+    b = glm::vec3(-1.0f*scale, 0.1, 1.0f*scale);
+    c = glm::vec3(1.0f*scale, 0.1, -1.0f*scale);
+    d = glm::vec3(1.0f*scale, 0.1, 1.0f*scale);
 
     subd_square(a, b, c, d, 9);
 
@@ -144,12 +144,12 @@ void Waveform::subd_skirts(glm::vec3 a, glm::vec3 b, int levels, int current)
         //triangle abc
         points.push_back(a);
         points.push_back(b);
-        points.push_back(glm::vec3(a.x, -0.5, a.z));
+        points.push_back(glm::vec3(a.x, 0.0, a.z));
 
         //triangle bcd
         points.push_back(b);
-        points.push_back(glm::vec3(a.x, -0.5, a.z));
-        points.push_back(glm::vec3(b.x, -0.5, b.z));
+        points.push_back(glm::vec3(a.x, 0.0, a.z));
+        points.push_back(glm::vec3(b.x, 0.0, b.z));
     }
     else
     {
@@ -170,9 +170,14 @@ void Waveform::display()
     glUseProgram(shader_display);
 
     // need to use the handle for the front buffer, the current data
-    // glUniform1i(glGetUniformLocation(shader_display, "data_texture"), my_front);
+    glUniform1i(glGetUniformLocation(shader_display, "data_texture"), my_front);
+
+    theta = 0.0002*SDL_GetTicks();
+    // phi = 0.0001*SDL_GetTicks();
     glUniform1f(glGetUniformLocation(shader_display, "theta"), theta);
     glUniform1f(glGetUniformLocation(shader_display, "phi"), phi);
+
+    glUniform1f(glGetUniformLocation(shader_display, "time"), 0.01*SDL_GetTicks());
  
     // draw everything in one go - surface/skirts distinction made in shader
     glDrawArrays(GL_TRIANGLES, 0, num_points);

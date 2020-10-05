@@ -6,6 +6,10 @@ out vec3 vPos;
 uniform float theta;
 uniform float phi;
 
+uniform float time;
+
+layout( rgba16 ) uniform image2D current;
+
 // uniform vec3 offset;
 // uniform float scale;
 
@@ -26,12 +30,12 @@ mat3 rotationMatrix(vec3 axis, float angle)
 void main()
 {
 
-	vec3 offset = vec3(0, 0.2*sin(5*vPosition.x*vPosition.z), 0);
+	vec3 offset = vec3(0, 0.1*sin(35*vPosition.x*vPosition.z+0.4*time) + 0.22, 0);
 
 	mat3 rotphi = rotationMatrix(vec3(1,0,0), -1.0*phi);
 	mat3 rottheta = rotationMatrix(vec3(0,1,0), -1.0*theta);
 
-	vPos = (rotphi * rottheta * 0.6 * ((vPosition.y>-0.1) ? vPosition+offset : vPosition));
+	vPos = (rotphi * rottheta * 0.6 * ((vPosition.y>0.001) ? vPosition+offset : vPosition));
 	
 	gl_Position = vec4(vPos,1.0);
 }
