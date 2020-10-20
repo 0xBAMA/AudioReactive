@@ -3,6 +3,8 @@
 
 #include "includes.h"
 
+#define LEVELS_DEEP 10
+// #define LEVELS_DEEP 8
 
 class Waveform
 {
@@ -14,11 +16,13 @@ public:
 		
 	// parameters for position, accessible from above
 	float theta = 0.2;
-	float phi = -0.35;
-		
-	// parameters for color, establishing the gradient
+	float phi = -0.75;
 
-	void feed_new_data(std::vector<Uint8> data);
+	glm::vec3 location = glm::vec3(0);
+		
+	// TODO: parameters for color, establishing the gradient
+
+	void feed_new_data(fftw_complex* data);
 
 private:
 
@@ -34,6 +38,7 @@ private:
 	GLuint shader_compute;
 	GLuint vao;
 	GLuint vbo;
+	GLuint ssbo;
 
 	// texture units
 	GLuint my_front;
@@ -46,8 +51,11 @@ private:
 };
 
 
+// #define FFT_SIZE 1024
+// #define FFT_SIZE 2048
+#define FFT_SIZE 4096
 // #define FFT_SIZE 8192
-#define FFT_SIZE 16384
+// #define FFT_SIZE 16384
 
 
 class AudioReactive

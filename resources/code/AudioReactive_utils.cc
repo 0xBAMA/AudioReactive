@@ -19,6 +19,9 @@ Waveform::Waveform()
     my_front = current_texture_unit;
     my_back = current_texture_unit+1;
 
+    // we used two
+    current_texture_unit += 2;
+
     GLuint my_front_loc, my_back_loc;
     glGenTextures(1, &my_front_loc);
     glGenTextures(1, &my_back_loc);
@@ -26,29 +29,51 @@ Waveform::Waveform()
 
     // going to use 16 bit values for the texture
     glBindTexture(GL_TEXTURE_2D, my_front_loc);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glBindImageTexture(my_front, my_front_loc, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, 8196, 8196, 0, GL_RGBA, GL_FLOAT, NULL);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+
+    // glBindImageTexture(my_front, my_front_loc, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16);
+    // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, FFT_SIZE/2, FFT_SIZE/2, 0, GL_RGBA, GL_FLOAT, NULL);
+    glBindImageTexture(my_front, my_front_loc, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+    // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, FFT_SIZE/2, FFT_SIZE/2, 0, GL_RGBA, GL_FLOAT, NULL);
+    // glGenerateMipmap(GL_TEXTURE_2D);
+
+    // load in some dummy data
+    std::string filename = std::string("dummy.png");
+    std::vector<unsigned char> image_loaded_bytes;
+    unsigned width, height;
+    unsigned error = lodepng::decode(image_loaded_bytes, width, height, filename.c_str());
+    if(error) std::cout << "decode error during load(\" "+ filename +" \") " << error << ": " << lodepng_error_text(error) << std::endl;
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, FFT_SIZE/2, FFT_SIZE/2, 0, GL_RGBA, GL_UNSIGNED_BYTE, &image_loaded_bytes[0]);
+
+
+    
     
     glBindTexture(GL_TEXTURE_2D, my_back_loc);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glBindImageTexture(my_back, my_back_loc, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, 8196, 8196, 0, GL_RGBA, GL_FLOAT, NULL);
-    glGenerateMipmap(GL_TEXTURE_2D);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // glBindImageTexture(my_back, my_back_loc, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA16);
+    // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, FFT_SIZE/2, FFT_SIZE/2, 0, GL_RGBA, GL_FLOAT, NULL);
+    glBindImageTexture(my_back, my_back_loc, 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
+    // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, FFT_SIZE/2, FFT_SIZE/2, 0, GL_RGBA, GL_FLOAT, NULL);
+    // glGenerateMipmap(GL_TEXTURE_2D);
     
-    // we used two
-    current_texture_unit += 2;
+    // load in the same dummy data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, FFT_SIZE/2, FFT_SIZE/2, 0, GL_RGBA, GL_UNSIGNED_BYTE, &image_loaded_bytes[0]);
+
+
     
     // compile shaders (display + compute)
     shader_display = Shader("resources/code/shaders/display.vs.glsl", "resources/code/shaders/display.fs.glsl").Program;
-    // shader_compute = CShader("resources/shaders/compute.cs.glsl").Program;
+    shader_compute = CShader("resources/code/shaders/compute.cs.glsl").Program;
 
     // using the display shader initially
     glUseProgram(shader_display);
@@ -65,7 +90,13 @@ Waveform::Waveform()
     // vertex attributes (position only)
     GLuint vPosition = glGetAttribLocation(shader_display, "vPosition");
     glEnableVertexAttribArray(vPosition);
-    glVertexAttribPointer(vPosition, 3, GL_FLOAT, GL_FALSE, 0, ((GLvoid*) (0))); 
+    glVertexAttribPointer(vPosition, 3, GL_FLOAT, GL_FALSE, 0, ((GLvoid*) (0)));
+
+
+    glGenBuffers(1, &ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GLfloat)*(FFT_SIZE/2), NULL,  GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo); 
 }
 
 Waveform::~Waveform()
@@ -85,17 +116,17 @@ void Waveform::generate_points()
     c = glm::vec3(1.0f*scale, 0.1, -1.0f*scale);
     d = glm::vec3(1.0f*scale, 0.1, 1.0f*scale);
 
-    subd_square(a, b, c, d, 9);
+    subd_square(a, b, c, d, LEVELS_DEEP);
 
     num_points = points.size();
     cout << "surface is " << num_points << " points" << endl;
 
   // skirts
     // generate points
-    subd_skirts(a, b, 9);
-    subd_skirts(b, d, 9);
-    subd_skirts(d, c, 9);
-    subd_skirts(c, a, 9);
+    subd_skirts(a, b, LEVELS_DEEP);
+    subd_skirts(b, d, LEVELS_DEEP);
+    subd_skirts(d, c, LEVELS_DEEP);
+    subd_skirts(c, a, LEVELS_DEEP);
     
     cout << "plus " << points.size()-num_points << " points for the skirts" << endl;
     cout << "for a total of " << points.size() << " points" << endl;
@@ -162,47 +193,73 @@ void Waveform::subd_skirts(glm::vec3 a, glm::vec3 b, int levels, int current)
 void Waveform::display()
 {
     
-    // bind vao, vbo
+    // bind vao, vbo, ssbo
     glBindVertexArray(vao);
     glBindBuffer( GL_ARRAY_BUFFER, vbo );
     
     // use shader
     glUseProgram(shader_display);
 
+    std::swap(my_front, my_back);
+
     // need to use the handle for the front buffer, the current data
-    glUniform1i(glGetUniformLocation(shader_display, "data_texture"), my_front);
+    glUniform1i(glGetUniformLocation(shader_display, "front_buffer"), my_front);
 
     theta = 0.0002*SDL_GetTicks();
     // phi = 0.0001*SDL_GetTicks();
     glUniform1f(glGetUniformLocation(shader_display, "theta"), theta);
     glUniform1f(glGetUniformLocation(shader_display, "phi"), phi);
 
+    glUniform3fv(glGetUniformLocation(shader_display, "location"), 1, glm::value_ptr(location));
+
     glUniform1f(glGetUniformLocation(shader_display, "time"), 0.01*SDL_GetTicks());
  
     // draw everything in one go - surface/skirts distinction made in shader
     glDrawArrays(GL_TRIANGLES, 0, num_points);
+    // glDrawArrays(GL_LINES, 0, num_points);
+
+    std::swap(my_front, my_back);
 }
 
-void Waveform::feed_new_data(std::vector<Uint8> data)
+void Waveform::feed_new_data(fftw_complex* input_data)
 {
     // use the compute shader program
-    // glUseProgram(shader_compute);
+    glUseProgram(shader_compute);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
 
     // the data goes in as a uniform vector of floats
+    GLfloat data[FFT_SIZE/2];
+    for(int i = 0; i < FFT_SIZE/2; i++)
+    {
+       data[i] = sqrt(input_data[i][0] * input_data[i][0] +
+                      input_data[i][1] * input_data[i][1]) / 64.0;
+       // cout << data[i] << endl;
+    }
+    
+    // glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GLfloat)*(FFT_SIZE/2), &data[0],  GL_DYNAMIC_COPY);
 
+    GLvoid* p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+    memcpy(p, &data[0], sizeof(GLfloat)*(FFT_SIZE/2));
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+    
     // the compute shader will need to know which is front/back
-    // glUniform1i(glGetUniformLocation(shader_compute, "front_buffer"), my_front);
-    // glUniform1i(glGetUniformLocation(shader_compute, "back_buffer"), my_back);
+    glUniform1i(glGetUniformLocation(shader_compute, "front_buffer"), my_front);
+    glUniform1i(glGetUniformLocation(shader_compute, "back_buffer"), my_back);
 
     // dispatch the compute shader
-    
+    glDispatchCompute( FFT_SIZE/2, FFT_SIZE/2, 1 );
+ 
     // wait to finish
     glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT); 
     
     // re generate the mipmap, after the compute has finished
-    glGenerateMipmap(GL_TEXTURE_2D);
+    // glGenerateMipmap(GL_TEXTURE_2D);
 
-    // linear data is stored in the texture, we will be doing the logarithmic conversion as part of our sampling 
+    // linear data is stored in the texture, we will be doing the logarithmic conversion as part of our sampling
+
+    // swap the buffers when you're done
+    std::swap(my_front, my_back);
 }
 
 
@@ -425,8 +482,8 @@ void AudioReactive::create_window()
 
 
     // std::string filename("test.wav");
-    // std::string filename("groupB.wav");
-    std::string filename("dennisMorrow.wav");
+    std::string filename("groupB.wav");
+    // std::string filename("dennisMorrow.wav");
 
 
     cout << "opening file: " << filename << endl;
@@ -545,23 +602,24 @@ void AudioReactive::gl_setup()
     cout << "done." << endl;
 
     // this is where I'll be setting up the shaders for the waveforms, as well as the geometry to represent them
-    waveforms.resize(2); // all the setup is done in the constructor, so this is going to be running all that twice
+    // waveforms.resize(2); // all the setup is done in the constructor, so this is going to be running all that twice
+    waveforms.resize(1); // all the setup is done in the constructor, so this is going to be running all that twice
 
 }
 
 
-static void HelpMarker(const char* desc)
-{
-	ImGui::TextDisabled("(?)");
-	if (ImGui::IsItemHovered())
-	{
-		ImGui::BeginTooltip();
-		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-		ImGui::TextUnformatted(desc);
-		ImGui::PopTextWrapPos();
-		ImGui::EndTooltip();
-	}
-}
+// static void HelpMarker(const char* desc)
+// {
+// 	ImGui::TextDisabled("(?)");
+// 	if (ImGui::IsItemHovered())
+// 	{
+// 		ImGui::BeginTooltip();
+// 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+// 		ImGui::TextUnformatted(desc);
+// 		ImGui::PopTextWrapPos();
+// 		ImGui::EndTooltip();
+// 	}
+// }
 
 void AudioReactive::draw_everything()
 {
@@ -585,33 +643,23 @@ void AudioReactive::draw_everything()
     
 
 	// Start the Dear ImGui frame
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplSDL2_NewFrame(window);
-	ImGui::NewFrame();
+	// ImGui_ImplOpenGL3_NewFrame();
+	// ImGui_ImplSDL2_NewFrame(window);
+	// ImGui::NewFrame();
 
 	// show the demo window
 	// static bool show_demo_window = true;
 	// if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
 	// do my own window
-	ImGui::SetNextWindowPos(ImVec2(10,10));
-	ImGui::SetNextWindowSize(ImVec2(256,385));
-	ImGui::Begin("Controls", NULL, 0);
+	// ImGui::SetNextWindowPos(ImVec2(10,10));
+	// ImGui::SetNextWindowSize(ImVec2(256,385));
+	// ImGui::Begin("Controls", NULL, 0);
 
 
 
     //do the other widgets
-   HelpMarker("shut up, compiler");
-
-
-   // // //TEMPORARILY REPORTING AUDIO STATUS IN THE MAIN LOOP - this is not going to give me enough information
-   // switch (SDL_GetAudioDeviceStatus(dev))
-   //  {
-   //      case SDL_AUDIO_STOPPED: printf("stopped\n"); break;
-   //      case SDL_AUDIO_PLAYING: printf("playing\n"); break;
-   //      case SDL_AUDIO_PAUSED: printf("paused\n"); break;
-   //      default: printf("???"); break;
-   //  }
+   // HelpMarker("shut up, compiler");
 
 
    // first step is to get the wav_offset value
@@ -633,57 +681,54 @@ void AudioReactive::draw_everything()
             }
         }
 
-        usleep(48000);
-        fftw_execute(Lplan);
-        fftw_execute(Rplan);
 
-        float lmax = 0;
-        float rmax = 0;
+        // float lmax = 0;
+        // float rmax = 0;
         
-        int samples_per_band = 128;
+        // int samples_per_band = 128;
 
-        for(int i = 0; i < FFT_SIZE/(2*samples_per_band); ++i)
-        {
-            fftw_complex Lsum; Lsum[0] = 0; Lsum[1] = 0;
-            fftw_complex Rsum; Rsum[0] = 0; Rsum[1] = 0;
+        // for(int i = 0; i < FFT_SIZE/(2*samples_per_band); ++i)
+        // {
+        //     fftw_complex Lsum; Lsum[0] = 0; Lsum[1] = 0;
+        //     fftw_complex Rsum; Rsum[0] = 0; Rsum[1] = 0;
 
-            for(int j = 0; j < FFT_SIZE/(2*samples_per_band); ++j)
-            {
-                Lsum[0] += (Lresult)[samples_per_band*i+j][0];
-                Lsum[1] += (Lresult)[samples_per_band*i+j][1];
+        //     for(int j = 0; j < FFT_SIZE/(2*samples_per_band); ++j)
+        //     {
+        //         Lsum[0] += (Lresult)[samples_per_band*i+j][0];
+        //         Lsum[1] += (Lresult)[samples_per_band*i+j][1];
                 
-                Rsum[0] += (Rresult)[samples_per_band*i+j][0];
-                Rsum[1] += (Rresult)[samples_per_band*i+j][1];
-            }
+        //         Rsum[0] += (Rresult)[samples_per_band*i+j][0];
+        //         Rsum[1] += (Rresult)[samples_per_band*i+j][1];
+        //     }
             
-            double Lmag = sqrt(Lsum[0] * Lsum[0] +
-                               Lsum[1] * Lsum[1]) / FFT_SIZE;
-            double Rmag = sqrt(Rsum[0] * Rsum[0] +
-                               Rsum[1] * Rsum[1]) / FFT_SIZE;
+        //     double Lmag = sqrt(Lsum[0] * Lsum[0] +
+        //                        Lsum[1] * Lsum[1]) / FFT_SIZE;
+        //     double Rmag = sqrt(Rsum[0] * Rsum[0] +
+        //                        Rsum[1] * Rsum[1]) / FFT_SIZE;
 
-            if(Lmag > lmax) lmax = Lmag;
-            if(Rmag > rmax) rmax = Rmag;
+        //     if(Lmag > lmax) lmax = Lmag;
+        //     if(Rmag > rmax) rmax = Rmag;
 
-            // cout << "\e[34m";
+        //     // cout << "\e[34m";
 
-            // while(Lmag > 0)
-            // {
-            //     printf("|");
-            //     Lmag -= 0.03;
-            //     Lmag *= 0.99;
-            // }
+        //     // while(Lmag > 0)
+        //     // {
+        //     //     printf("|");
+        //     //     Lmag -= 0.03;
+        //     //     Lmag *= 0.99;
+        //     // }
 
-            // cout << "\e[0m" << endl;
-            // cout << "\e[31m"; 
-            // while(Rmag > 0)
-            // {
-            //     printf("|");
-            //     Rmag -= 0.03;
-            //     Rmag *= 0.99;
-            // }
+        //     // cout << "\e[0m" << endl;
+        //     // cout << "\e[31m"; 
+        //     // while(Rmag > 0)
+        //     // {
+        //     //     printf("|");
+        //     //     Rmag -= 0.03;
+        //     //     Rmag *= 0.99;
+        //     // }
 
-            // cout << "\e[0m" << endl;
-        }
+        //     // cout << "\e[0m" << endl;
+        // }
 
         // cout << "lmax is: " << lmax << " and rmax is: " << rmax << endl; // maximum intensity reported across all bands
 
@@ -691,14 +736,28 @@ void AudioReactive::draw_everything()
         //  at a high level, there are two steps to this process -
         //    1 - update the data on the GPU with the compute shader (takes the appropriate channel's freq data as input e.g. L takes Lresult, R takes Rresult)
         //    2 - the rendering shader references this same data texture and uses it as a height value when processing the surface/skirt geometry
-        
-        for(auto& x : waveforms)
-            x.display();
-        
-        ImGui::End();
-        ImGui::Render();
 
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());   // put imgui data into the framebuffer
+
+        // usleep(48000);
+        fftw_execute(Lplan);
+        // fftw_execute(Rplan);
+        
+        // fftw_complex dummy[FFT_SIZE];
+        // waveforms[0].feed_new_data(dummy);
+        
+        waveforms[0].feed_new_data(Lresult);
+        // waveforms[1].feed_new_data(Rresult);
+
+        waveforms[0].location = glm::vec3(0,-0.5,0);
+        // waveforms[1].location = glm::vec3(0,   0,0);
+        
+        waveforms[0].display();
+        // waveforms[1].display();
+        
+        // ImGui::End();
+        // ImGui::Render();
+
+        // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());   // put imgui data into the framebuffer
 
         SDL_GL_SwapWindow(window); // swap the double buffers
 
@@ -708,6 +767,9 @@ void AudioReactive::draw_everything()
         while (SDL_PollEvent(&event))
         {
             ImGui_ImplSDL2_ProcessEvent(&event);
+
+            if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE)
+                waveforms[0].feed_new_data(Lresult);
 
             if (event.type == SDL_QUIT)
                 pquit = true;

@@ -6,10 +6,11 @@ out vec3 vPos;
 uniform float theta;
 uniform float phi;
 
+uniform vec3 location;
+
 uniform float time;
 
-layout( rgba16 ) uniform image2D current;
-
+uniform sampler2D front_buffer;
 // uniform vec3 offset;
 // uniform float scale;
 
@@ -30,12 +31,18 @@ mat3 rotationMatrix(vec3 axis, float angle)
 void main()
 {
 
-	vec3 offset = vec3(0, 0.1*sin(35*vPosition.x*vPosition.z+0.4*time) + 0.22, 0);
+	// vec3 offset = vec3(0, 0.2*sin(90*vPosition.x*vPosition.z+0.1*time) + 0.4, 0);
+	
+	vec2 sampleloc = vPosition.xz+vec2(0.5);
+	sampleloc.x = sqrt(sampleloc.x);
+	sampleloc.y = pow(sampleloc.y, 4);
+	
+	vec3 offset = texture2D(front_buffer, sampleloc).xyz;
 
 	mat3 rotphi = rotationMatrix(vec3(1,0,0), -1.0*phi);
 	mat3 rottheta = rotationMatrix(vec3(0,1,0), -1.0*theta);
 
-	vPos = (rotphi * rottheta * 0.6 * ((vPosition.y>0.001) ? vPosition+offset : vPosition));
+	vPos = (vPosition.y>0.001) ? vPosition+vec3(0,offset.y,0) : vPosition;
 	
-	gl_Position = vec4(vPos,1.0);
+	gl_Position = vec4((rotphi * rottheta * ((vPosition.y>0.001) ? vPosition+vec3(0,offset.y,0)+location : vPosition+location)), 1.0);
 }
